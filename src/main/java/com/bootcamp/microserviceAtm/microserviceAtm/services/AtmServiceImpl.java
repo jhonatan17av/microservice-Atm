@@ -106,24 +106,27 @@ public class AtmServiceImpl implements AtmService
 
   @Override
   public Mono<SavingAccount> transferSavingAccountToCurrentAccount(MovementTransferDto movementTransferDto) {
+
     return serviceClient.findSavingAbyNumAccount(movementTransferDto.getNumAccountOrigin())
         .flatMap(savingAccount -> {
 
           serviceClient.findCurrentAbyNumAccount(movementTransferDto.getNumAccountDestine())
               .flatMap(currentAccount -> {
                 double comi = 10.0;
-                if (savingAccount.getNomBank().equalsIgnoreCase(currentAccount.getNomBank())) comi = 0.0;
+                if (currentAccount.getNomBank().equalsIgnoreCase(savingAccount.getNomBank())) comi = 0.0;
+                movementTransferDto.setTypeMovement("retiro");
                 movementTransferDto.setCommission(comi);
                 movementTransferDto.setCreatedAt(new Date());
-                return serviceClient.saveMovementCurrentA(conv.toMovement(movementTransferDto))
+                return serviceClient.saveMovementSavingA(conv.toMovement(movementTransferDto))
                     .flatMap(movement -> {
                       movement.setNumAccount(movementTransferDto.getNumAccountOrigin());
-                      movement.setTypeMovement("retiro");
+                      movement.setTypeMovement(movementTransferDto.getTypeMovement());
                       movement.setBalanceTransaction(movementTransferDto.getBalanceTransaction() + movementTransferDto.getCommission());
                       movement.setCommission(movementTransferDto.getCommission());
                       movement.setCreatedAt(new Date());
-                      return serviceClient.saveMovementSavingA(movement);
+                      return serviceClient.saveMovementCurrentA(movement);
                     }).flatMap(movement -> {
+                      savingAccount.setNumAccount(movement.getNumAccount());
                       return Mono.just(savingAccount);
                     });
               });
@@ -140,16 +143,17 @@ public class AtmServiceImpl implements AtmService
               .flatMap(savingAccount -> {
                 double comi = 10.0;
                 if (currentAccount.getNomBank().equalsIgnoreCase(savingAccount.getNomBank())) comi = 0.0;
+                movementTransferDto.setTypeMovement("retiro");
                 movementTransferDto.setCommission(comi);
                 movementTransferDto.setCreatedAt(new Date());
-                return serviceClient.saveMovementSavingA(conv.toMovement(movementTransferDto))
+                return serviceClient.saveMovementCurrentA(conv.toMovement(movementTransferDto))
                     .flatMap(movement -> {
                       movement.setNumAccount(movementTransferDto.getNumAccountOrigin());
-                      movement.setTypeMovement("retiro");
+                      movement.setTypeMovement(movementTransferDto.getTypeMovement());
                       movement.setBalanceTransaction(movementTransferDto.getBalanceTransaction() + movementTransferDto.getCommission());
                       movement.setCommission(movementTransferDto.getCommission());
                       movement.setCreatedAt(new Date());
-                      return serviceClient.saveMovementCurrentA(movement);
+                      return serviceClient.saveMovementSavingA(movement);
                     }).flatMap(movement -> {
                       return Mono.just(currentAccount);
                     });
