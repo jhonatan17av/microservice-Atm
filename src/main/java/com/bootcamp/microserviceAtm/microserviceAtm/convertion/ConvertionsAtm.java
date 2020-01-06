@@ -3,6 +3,7 @@ package com.bootcamp.microserviceAtm.microserviceAtm.convertion;
 
 import com.bootcamp.microserviceAtm.microserviceAtm.models.documents.Movement;
 import com.bootcamp.microserviceAtm.microserviceAtm.models.dto.MovementBasicDto;
+import com.bootcamp.microserviceAtm.microserviceAtm.models.dto.MovementTransferDto;
 import org.springframework.stereotype.Controller;
 
 @Controller
@@ -37,6 +38,16 @@ public class ConvertionsAtm {
 	public Movement toMovement(MovementBasicDto dto) {
 		Movement movement = new Movement();
 		movement.setNumAccount(dto.getNumAccount());
+		movement.setTypeMovement(dto.getTypeMovement());
+		movement.setBalanceTransaction(dto.getBalanceTransaction());
+		movement.setCommission(dto.getCommission());
+		movement.setCreatedAt(dto.getCreatedAt());
+		return movement;
+	}
+
+	public Movement toMovement(MovementTransferDto dto) {
+		Movement movement = new Movement();
+		movement.setNumAccount(dto.getNumAccountDestine());
 		movement.setTypeMovement(dto.getTypeMovement());
 		movement.setBalanceTransaction(dto.getBalanceTransaction());
 		movement.setCommission(dto.getCommission());

@@ -2,8 +2,11 @@ package com.bootcamp.microserviceAtm.microserviceAtm.services;
 
 import com.bootcamp.microserviceAtm.microserviceAtm.convertion.ConvertionsAtm;
 import com.bootcamp.microserviceAtm.microserviceAtm.models.documents.Atm;
+import com.bootcamp.microserviceAtm.microserviceAtm.models.documents.CurrentAccount;
 import com.bootcamp.microserviceAtm.microserviceAtm.models.documents.Movement;
+import com.bootcamp.microserviceAtm.microserviceAtm.models.documents.SavingAccount;
 import com.bootcamp.microserviceAtm.microserviceAtm.models.dto.MovementBasicDto;
+import com.bootcamp.microserviceAtm.microserviceAtm.models.dto.MovementTransferDto;
 import com.bootcamp.microserviceAtm.microserviceAtm.repository.AtmRepository;
 import com.bootcamp.microserviceAtm.microserviceAtm.repository.MovementRepository;
 import com.bootcamp.microserviceAtm.microserviceAtm.services.serviceDto.IServiceClientDto;
@@ -15,7 +18,8 @@ import reactor.core.publisher.Mono;
 import java.util.Date;
 
 @Service
-public class AtmServiceImpl implements AtmService {
+public class AtmServiceImpl implements AtmService
+{
 
   @Autowired
   private AtmRepository repoAtm;
@@ -39,18 +43,16 @@ public class AtmServiceImpl implements AtmService {
   @Override
   public Mono<MovementBasicDto> saveMovement(MovementBasicDto movementBasicDto) {
 
-    if (movementBasicDto.getNomAccount().equals("Cuenta de Ahorro")) {
+    if (movementBasicDto.getNomAccount().equalsIgnoreCase("Cuenta de Ahorro")) {
       return serviceClient.findSavingAbyNumAccount(movementBasicDto.getNumAccount())
           .flatMap(savingAccount -> {
-            double comi = 0.0;
+            double comi = 15.0;
 
-            if (!savingAccount.getNomBank().equals("Bcp")) {
-              comi = 15.0;
-              movementBasicDto.setCommission(comi);
-            }
+            if (savingAccount.getNomBank().equalsIgnoreCase("Bcp")) comi = 0.0;
 
-            //movementBasicDto.setBalanceTransaction(movementBasicDto.getBalanceTransaction());
+            movementBasicDto.setCommission(comi);
             movementBasicDto.setCreatedAt(new Date());
+
             return repoMov.save(conv.toMovement(movementBasicDto))
                 .flatMap(movement -> {
                   movement.setNumAccount(movementBasicDto.getNumAccount());
@@ -64,17 +66,14 @@ public class AtmServiceImpl implements AtmService {
                   return Mono.just(movementBasicDto);
                 });
           }).switchIfEmpty(Mono.empty());
-    } else if (movementBasicDto.getNomAccount().equals("Cuenta Corriente")) {
+    } else if (movementBasicDto.getNomAccount().equalsIgnoreCase("Cuenta Corriente")) {
       return serviceClient.findCurrentAbyNumAccount(movementBasicDto.getNumAccount())
           .flatMap(currentAccount -> {
-            double comi = 0.0;
+            double comi = 15.0;
 
-            if (!currentAccount.getNomBank().equals("Bcp")) {
-              comi = 15.0;
-              movementBasicDto.setCommission(comi);
-            }
+            if (currentAccount.getNomBank().equalsIgnoreCase("Bcp")) comi = 0.0;
 
-            movementBasicDto.setBalanceTransaction(movementBasicDto.getBalanceTransaction());
+            movementBasicDto.setCommission(comi);
             movementBasicDto.setCreatedAt(new Date());
             return repoMov.save(conv.toMovement(movementBasicDto))
                 .flatMap(movement -> {
@@ -103,5 +102,59 @@ public class AtmServiceImpl implements AtmService {
   @Override
   public Flux<Movement> findMovByNumAccount(String numAccount) {
     return repoMov.findBynumAccount(numAccount);
+  }
+
+  @Override
+  public Mono<SavingAccount> transferSavingAccountToCurrentAccount(MovementTransferDto movementTransferDto) {
+    return serviceClient.findSavingAbyNumAccount(movementTransferDto.getNumAccountOrigin())
+        .flatMap(savingAccount -> {
+
+          serviceClient.findCurrentAbyNumAccount(movementTransferDto.getNumAccountDestine())
+              .flatMap(currentAccount -> {
+                double comi = 10.0;
+                if (savingAccount.getNomBank().equalsIgnoreCase(currentAccount.getNomBank())) comi = 0.0;
+                movementTransferDto.setCommission(comi);
+                movementTransferDto.setCreatedAt(new Date());
+                return serviceClient.saveMovementCurrentA(conv.toMovement(movementTransferDto))
+                    .flatMap(movement -> {
+                      movement.setNumAccount(movementTransferDto.getNumAccountOrigin());
+                      movement.setTypeMovement("retiro");
+                      movement.setBalanceTransaction(movementTransferDto.getBalanceTransaction() + movementTransferDto.getCommission());
+                      movement.setCommission(movementTransferDto.getCommission());
+                      movement.setCreatedAt(new Date());
+                      return serviceClient.saveMovementSavingA(movement);
+                    }).flatMap(movement -> {
+                      return Mono.just(savingAccount);
+                    });
+              });
+          return Mono.just(savingAccount);
+        });
+  }
+
+  @Override
+  public Mono<CurrentAccount> transferCurrentAccountToSavingAccount(MovementTransferDto movementTransferDto) {
+    return serviceClient.findCurrentAbyNumAccount(movementTransferDto.getNumAccountOrigin())
+        .flatMap(currentAccount -> {
+
+          serviceClient.findSavingAbyNumAccount(movementTransferDto.getNumAccountDestine())
+              .flatMap(savingAccount -> {
+                double comi = 10.0;
+                if (currentAccount.getNomBank().equalsIgnoreCase(savingAccount.getNomBank())) comi = 0.0;
+                movementTransferDto.setCommission(comi);
+                movementTransferDto.setCreatedAt(new Date());
+                return serviceClient.saveMovementSavingA(conv.toMovement(movementTransferDto))
+                    .flatMap(movement -> {
+                      movement.setNumAccount(movementTransferDto.getNumAccountOrigin());
+                      movement.setTypeMovement("retiro");
+                      movement.setBalanceTransaction(movementTransferDto.getBalanceTransaction() + movementTransferDto.getCommission());
+                      movement.setCommission(movementTransferDto.getCommission());
+                      movement.setCreatedAt(new Date());
+                      return serviceClient.saveMovementCurrentA(movement);
+                    }).flatMap(movement -> {
+                      return Mono.just(currentAccount);
+                    });
+              });
+          return Mono.just(currentAccount);
+        });
   }
 }

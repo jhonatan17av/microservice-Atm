@@ -1,8 +1,11 @@
 package com.bootcamp.microserviceAtm.microserviceAtm.controller;
 
 import com.bootcamp.microserviceAtm.microserviceAtm.models.documents.Atm;
+import com.bootcamp.microserviceAtm.microserviceAtm.models.documents.CurrentAccount;
 import com.bootcamp.microserviceAtm.microserviceAtm.models.documents.Movement;
+import com.bootcamp.microserviceAtm.microserviceAtm.models.documents.SavingAccount;
 import com.bootcamp.microserviceAtm.microserviceAtm.models.dto.MovementBasicDto;
+import com.bootcamp.microserviceAtm.microserviceAtm.models.dto.MovementTransferDto;
 import com.bootcamp.microserviceAtm.microserviceAtm.services.AtmService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -72,9 +75,42 @@ public class AtmRestController {
     return Mono.just(movementBasicDto)
         .flatMap(movementBasicDto1 -> {
           return atmService.saveMovement(movementBasicDto)
-              .map(a -> ResponseEntity.created(URI.create("/saveMov"))
-                  .contentType(MediaType.APPLICATION_JSON).body(a));
-        });
+              .map(ResponseEntity::ok);
+        }).defaultIfEmpty(ResponseEntity.badRequest().build());
+  }
+
+  /**
+   * .
+   * This method save Tranfer Mov form Saving Account to Current Account
+   */
+  @ApiOperation(value = "Save Tranfer Mov form Saving Account to Current Account", notes = "Returns one Movement")
+  @ApiResponses({
+      @ApiResponse(code = 200, message = "Exits a Movement")
+  })
+  @PostMapping("/tranferFromSavingAccount")
+  public Mono<ResponseEntity<SavingAccount>> saveTransFromSAtoCA(@RequestBody MovementTransferDto movementTransferDto) {
+    return Mono.just(movementTransferDto)
+        .flatMap(movementBasicDto1 -> {
+          return atmService.transferSavingAccountToCurrentAccount(movementTransferDto)
+              .map(ResponseEntity::ok);
+        }).defaultIfEmpty(ResponseEntity.notFound().build());
+  }
+
+  /**
+   * .
+   * This method save Tranfer Mov form  Current Account to Saving Account
+   */
+  @ApiOperation(value = "Save Tranfer Mov form  Current Account to Saving Account ", notes = "Returns one Movement")
+  @ApiResponses({
+      @ApiResponse(code = 200, message = "Exits a Movement")
+  })
+  @PostMapping("/tranferFromCurrentAccount")
+  public Mono<ResponseEntity<CurrentAccount>> saveTransFromCAtoSA(@RequestBody MovementTransferDto movementTransferDto) {
+    return Mono.just(movementTransferDto)
+        .flatMap(movementBasicDto1 -> {
+          return atmService.transferCurrentAccountToSavingAccount(movementTransferDto)
+              .map(ResponseEntity::ok);
+        }).defaultIfEmpty(ResponseEntity.notFound().build());
   }
 
   /**
