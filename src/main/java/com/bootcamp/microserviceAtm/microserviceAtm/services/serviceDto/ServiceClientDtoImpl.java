@@ -1,5 +1,6 @@
 package com.bootcamp.microserviceAtm.microserviceAtm.services.serviceDto;
 
+import com.bootcamp.microserviceAtm.microserviceAtm.models.documents.CurrentAccount;
 import com.bootcamp.microserviceAtm.microserviceAtm.models.documents.Movement;
 import com.bootcamp.microserviceAtm.microserviceAtm.models.documents.SavingAccount;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -49,7 +50,7 @@ public class ServiceClientDtoImpl implements IServiceClientDto {
 
 	@Override
 	public Mono<Movement> saveMovementCurrentA(Movement movement) {
-		return clientSavingAccount.post()
+		return clientCurrentAccount.post()
 				.uri("/saveMov")
 				.accept(MediaType.APPLICATION_JSON)
 				.contentType(MediaType.APPLICATION_JSON)
@@ -59,14 +60,14 @@ public class ServiceClientDtoImpl implements IServiceClientDto {
 	}
 
 	@Override
-	public Mono<SavingAccount> findCurrentAbyNumAccount(String numAccount) {
+	public Mono<CurrentAccount> findCurrentAbyNumAccount(String numAccount) {
 		Map<String, Object> params = new HashMap<>();
 		params.put("numAccount", numAccount);
-		return clientSavingAccount.get()
+		return clientCurrentAccount.get()
 				.uri("/numAccount/{numAccount}", params)
 				.accept(MediaType.APPLICATION_JSON)
 				.retrieve()
-				.bodyToMono(SavingAccount.class);
+				.bodyToMono(CurrentAccount.class);
 	}
 
 }

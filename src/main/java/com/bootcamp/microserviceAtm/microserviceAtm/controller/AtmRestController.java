@@ -72,7 +72,7 @@ public class AtmRestController {
     return Mono.just(movementBasicDto)
         .flatMap(movementBasicDto1 -> {
           return atmService.saveMovement(movementBasicDto)
-              .map(a -> ResponseEntity.created(URI.create("/atm"))
+              .map(a -> ResponseEntity.created(URI.create("/saveMov"))
                   .contentType(MediaType.APPLICATION_JSON).body(a));
         });
   }
